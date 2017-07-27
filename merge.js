@@ -1,12 +1,17 @@
 /**
  * Deep merge two objects and return a third object
- * If isExtend is true, the content of second object is copied to the first object.
+ * If isExtend is true, the content of following objects are copied to the first object.
+ * arrayMerge function determined how array is merged. 
+ * By default, object value is merged and primative value is replaced  based on position.
  * @param {boolean} isExtend - Whether to extend the most left object or return a new object.
- * @param {Object} firstObj - The first object to merge
+ * @param {Function} arrayMerge - If given, array is merged using this function.
+ * @param {Object} firstObj - The first object to merge.
+ * @param {...Object} [n] - An object to merge into the previous one.
+ * @returns {Object} - The merged object. If the first argument is true, the first object is returned.
  */
-function merge(isExtend, firstObj) {
+function merge(isExtend, arrayMerge, firstObj) {
     let returnObj = {};
-    let args = Array.prototype.slice.call(arguments, 1);
+    let args = Array.prototype.slice.call(arguments, 2);
 
     const doCopy = function (copy, original) {
         if (typeof copy !== 'object') {
@@ -20,18 +25,22 @@ function merge(isExtend, firstObj) {
             } else {
                 // If value is array, merge content of array based on position
                 if (isArray(originalValue)) {
-                    if (!copy[key]) {
-                        copy[key] = [];
-                    }
-
-                    for (let i = 0; i < originalValue.length; i++) {
-                        if (isObject(originalValue[i]) || isArray(originalValue[i])) {
-                            copy[key][i] = doCopy(copy[key][i] || {}, originalValue[i]);
-                        } else {
-                            // If array value is primitive, copy directly
-                            copy[key][i] = originalValue[i]
+                    if (typeof arrayMerge === 'function') {
+                        arrayMerge(copy[key], originalValue)
+                    } else {
+                        if (!copy[key]) {
+                            copy[key] = [];
                         }
-                    };
+                        
+                        for (let i = 0; i < originalValue.length; i++) {
+                            if (isObject(originalValue[i]) || isArray(originalValue[i])) {
+                                copy[key][i] = doCopy(copy[key][i] || {}, originalValue[i]);
+                            } else {
+                                // If array value is primitive, copy directly
+                                copy[key][i] = originalValue[i]
+                            }
+                        };
+                    }
                 } else {
                     copy[key] = original[key]
                 }
@@ -44,7 +53,7 @@ function merge(isExtend, firstObj) {
     // If isExtend is true, copy into the existing object.
     if (isExtend) {
         returnObj = firstObj;
-        args = Array.prototype.slice.call(arguments, 2);
+        args = Array.prototype.slice.call(arguments, 3);
     }
 
     // For each object, merge to the return object
